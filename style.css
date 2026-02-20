@@ -1,0 +1,128 @@
+/* ST-AutoPulse Lite Styles */
+
+.autopulse-settings {
+    padding: 4px 0;
+}
+
+/* Status Bar */
+.autopulse-status {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 8px 12px;
+    border-radius: 6px;
+    background: var(--SmartThemeBotMesBlurTintColor, rgba(0, 0, 0, 0.1));
+    margin-bottom: 10px;
+    font-size: 0.9em;
+}
+
+.autopulse-status-dot {
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+    flex-shrink: 0;
+}
+
+.autopulse-status-dot.disconnected {
+    background: #9e9e9e;
+}
+
+.autopulse-status-dot.active {
+    background: #4caf50;
+    animation: autopulse-breathe 2s ease-in-out infinite;
+}
+
+@keyframes autopulse-breathe {
+
+    0%,
+    100% {
+        opacity: 1;
+        box-shadow: 0 0 4px #4caf50;
+    }
+
+    50% {
+        opacity: 0.5;
+        box-shadow: 0 0 8px #4caf50;
+    }
+}
+
+/* Setting Groups */
+.autopulse-setting-group {
+    margin: 10px 0;
+}
+
+.autopulse-setting-group label {
+    display: block;
+    margin-bottom: 4px;
+    font-weight: 600;
+}
+
+.autopulse-setting-group small {
+    font-weight: normal;
+    opacity: 0.7;
+}
+
+/* Interval Row */
+.autopulse-interval-row {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.autopulse-interval-row input[type="range"] {
+    flex: 1;
+}
+
+.autopulse-interval-num {
+    width: 60px !important;
+    text-align: center;
+}
+
+/* Timer Info */
+.autopulse-timer-info {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 6px 12px;
+    border-radius: 6px;
+    background: var(--SmartThemeBotMesBlurTintColor, rgba(0, 0, 0, 0.08));
+    margin: 8px 0;
+    font-size: 0.88em;
+    color: var(--SmartThemeBodyColor, #ccc);
+}
+
+/* Prompt Input */
+.autopulse-prompt-input {
+    width: 100%;
+    min-height: 80px;
+    resize: vertical;
+}
+
+/* Action Buttons */
+.autopulse-actions {
+    margin: 10px 0;
+}
+
+/* Notice */
+.autopulse-notice {
+    display: flex;
+    align-items: flex-start;
+    gap: 8px;
+    padding: 10px 12px;
+    border-radius: 6px;
+    background: var(--SmartThemeBotMesBlurTintColor, rgba(0, 0, 0, 0.06));
+    margin-top: 12px;
+    font-size: 0.85em;
+    opacity: 0.8;
+    line-height: 1.4;
+}
+
+.autopulse-notice .fa-circle-info {
+    margin-top: 2px;
+    flex-shrink: 0;
+}
+
+.autopulse-notice a {
+    color: var(--SmartThemeQuoteColor, #4fc3f7);
+    text-decoration: underline;
+}

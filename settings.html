@@ -1,0 +1,70 @@
+<div class="autopulse-settings">
+    <div class="inline-drawer">
+        <div class="inline-drawer-toggle inline-drawer-header">
+            <b>ST-AutoPulse Lite</b>
+            <div class="inline-drawer-icon fa-solid fa-circle-chevron-down down"></div>
+        </div>
+        <div class="inline-drawer-content">
+
+            <!-- Status -->
+            <div class="autopulse-status" id="autopulse_status_bar">
+                <span class="autopulse-status-dot disconnected" id="autopulse_status_dot"></span>
+                <span id="autopulse_status_text">已停用</span>
+            </div>
+
+            <!-- Enable Toggle -->
+            <label class="checkbox_label" for="autopulse_enabled">
+                <input type="checkbox" id="autopulse_enabled" />
+                <span>启用自动消息</span>
+            </label>
+
+            <!-- Interval -->
+            <div class="autopulse-setting-group">
+                <label>消息间隔（分钟）</label>
+                <div class="autopulse-interval-row">
+                    <input type="range" id="autopulse_interval_range" min="1" max="180" value="30" />
+                    <input type="number" id="autopulse_interval_input" min="1" max="180" value="30"
+                        class="text_pole autopulse-interval-num" />
+                </div>
+            </div>
+
+            <!-- Timer Info -->
+            <div class="autopulse-timer-info" id="autopulse_timer_info" style="display:none;">
+                <span class="fa-solid fa-clock"></span>
+                <span id="autopulse_next_trigger">计算中...</span>
+            </div>
+
+            <!-- Prompt -->
+            <div class="autopulse-setting-group">
+                <label>
+                    自定义触发提示词
+                    <small>（留空使用默认提示词）</small>
+                </label>
+                <textarea id="autopulse_prompt" class="text_pole autopulse-prompt-input" rows="4"
+                    placeholder="例如：一段时间过去了，角色想要主动联系用户。根据当前对话上下文和角色性格，生成一条自然的主动消息。"></textarea>
+            </div>
+
+            <!-- Desktop Notification -->
+            <label class="checkbox_label" for="autopulse_notify">
+                <input type="checkbox" id="autopulse_notify" checked />
+                <span>桌面通知</span>
+            </label>
+
+            <!-- Manual Trigger -->
+            <div class="autopulse-actions">
+                <div class="menu_button" id="autopulse_trigger_now">
+                    <span class="fa-solid fa-bolt"></span>
+                    <span>立即触发一次</span>
+                </div>
+            </div>
+
+            <!-- Info Notice -->
+            <div class="autopulse-notice">
+                <span class="fa-solid fa-circle-info"></span>
+                <span>Lite 版本：定时器在浏览器中运行，关闭页面后会停止。如需后台持续运行，请使用 <a href="https://github.com/NANA3333333/ST-AutoPulse"
+                        target="_blank">完整版 ST-AutoPulse</a>。</span>
+            </div>
+
+        </div>
+    </div>
+</div>
