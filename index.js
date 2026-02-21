@@ -665,7 +665,16 @@ function onPressureReturnChange() {
 
 function updatePressureDisplay() {
     const display = $('#autopulse_pressure_display');
-    display.text(pressureLevel);
+    const settings = getSettings();
+    const max = settings.pressureMaxLevel || 4;
+
+    let emoji = '😊';
+    if (pressureLevel >= max) emoji = '💢';
+    else if (pressureLevel >= max - 1) emoji = '😠';
+    else if (pressureLevel >= 2) emoji = '😰';
+    else if (pressureLevel >= 1) emoji = '🥺';
+
+    display.text(`${emoji} 等级 ${pressureLevel}`);
 
     // Color logic
     if (pressureLevel === 0) display.css('color', '');
