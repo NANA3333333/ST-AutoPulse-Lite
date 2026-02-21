@@ -646,10 +646,10 @@ function onPressureEnabledChange() {
 
 function onPressureMaxLevelChange(value) {
     const settings = getSettings();
-    const v = Math.max(1, Math.min(4, Number(value) || 4));
+    const v = Math.max(1, Math.min(5, Number(value) || 4));
     settings.pressureMaxLevel = v;
-    $('#autopulse_pressure_max_range').val(v);
-    $('#autopulse_pressure_max_input').val(v);
+    $('#autopulse_pressure_max').val(v);
+    $('#autopulse_pressure_max_display').text(v);
     saveSettings();
     if (pressureLevel > v) {
         pressureLevel = v;
@@ -687,8 +687,8 @@ function onJealousyChanceChange(value) {
     const settings = getSettings();
     const v = Math.max(0, Math.min(100, Number(value) || 50));
     settings.jealousyChance = v;
-    $('#autopulse_jealousy_chance_range').val(v);
-    $('#autopulse_jealousy_chance_input').val(v);
+    $('#autopulse_jealousy_chance').val(v);
+    $('#autopulse_jealousy_chance_display').text(`${v}%`);
     saveSettings();
 }
 
@@ -696,10 +696,12 @@ function onJealousyDelayMinChange(value) {
     const settings = getSettings();
     const v = Math.max(1, Math.min(300, Number(value) || 30));
     settings.jealousyDelayMin = v;
-    $('#autopulse_jealousy_delay_min_input').val(v);
+    $('#autopulse_jealousy_delay_min').val(v);
+    $('#autopulse_jealousy_delay_min_display').text(`${v}s`);
     if (settings.jealousyDelayMin > settings.jealousyDelayMax) {
         settings.jealousyDelayMax = settings.jealousyDelayMin;
-        $('#autopulse_jealousy_delay_max_input').val(v);
+        $('#autopulse_jealousy_delay_max').val(v);
+        $('#autopulse_jealousy_delay_max_display').text(`${v}s`);
     }
     saveSettings();
 }
@@ -711,7 +713,8 @@ function onJealousyDelayMaxChange(value) {
         v = settings.jealousyDelayMin;
     }
     settings.jealousyDelayMax = v;
-    $('#autopulse_jealousy_delay_max_input').val(v);
+    $('#autopulse_jealousy_delay_max').val(v);
+    $('#autopulse_jealousy_delay_max_display').text(`${v}s`);
     saveSettings();
 }
 
@@ -859,17 +862,19 @@ function loadSettingsUI() {
 
     // Pressure settings
     $('#autopulse_pressure_enabled').prop('checked', settings.pressureEnabled);
-    $('#autopulse_pressure_max_range').val(settings.pressureMaxLevel || 4);
-    $('#autopulse_pressure_max_input').val(settings.pressureMaxLevel || 4);
+    $('#autopulse_pressure_max').val(settings.pressureMaxLevel || 4);
+    $('#autopulse_pressure_max_display').text(settings.pressureMaxLevel || 4);
     $('#autopulse_pressure_return').prop('checked', settings.pressureReturnEnabled !== false);
     updatePressureDisplay();
 
     // Jealousy settings
     $('#autopulse_jealousy_enabled').prop('checked', settings.jealousyEnabled);
-    $('#autopulse_jealousy_chance_range').val(settings.jealousyChance || 50);
-    $('#autopulse_jealousy_chance_input').val(settings.jealousyChance || 50);
-    $('#autopulse_jealousy_delay_min_input').val(settings.jealousyDelayMin || 30);
-    $('#autopulse_jealousy_delay_max_input').val(settings.jealousyDelayMax || 120);
+    $('#autopulse_jealousy_chance').val(settings.jealousyChance || 50);
+    $('#autopulse_jealousy_chance_display').text(`${settings.jealousyChance || 50}%`);
+    $('#autopulse_jealousy_delay_min').val(settings.jealousyDelayMin || 30);
+    $('#autopulse_jealousy_delay_min_display').text(`${settings.jealousyDelayMin || 30}s`);
+    $('#autopulse_jealousy_delay_max').val(settings.jealousyDelayMax || 120);
+    $('#autopulse_jealousy_delay_max_display').text(`${settings.jealousyDelayMax || 120}s`);
     $('#autopulse_jealousy_prompt').val(settings.jealousyPrompt || JEALOUSY_PROMPT);
     updateJealousyCharPicker();
 }
@@ -891,17 +896,64 @@ async function initExtension() {
 
     // Bind UI events - Pressure
     $('#autopulse_pressure_enabled').on('change', onPressureEnabledChange);
-    $('#autopulse_pressure_max_range').on('input', function () { onPressureMaxLevelChange(this.value); });
-    $('#autopulse_pressure_max_input').on('change', function () { onPressureMaxLevelChange(this.value); });
+    $('#autopulse_pressure_max').on('input', function () { onPressureMaxLevelChange(this.value); });
     $('#autopulse_pressure_return').on('change', onPressureReturnChange);
 
     // Bind UI events - Jealousy
     $('#autopulse_jealousy_enabled').on('change', onJealousyEnabledChange);
-    $('#autopulse_jealousy_chance_range').on('input', function () { onJealousyChanceChange(this.value); });
-    $('#autopulse_jealousy_chance_input').on('change', function () { onJealousyChanceChange(this.value); });
-    $('#autopulse_jealousy_delay_min_input').on('change', function () { onJealousyDelayMinChange(this.value); });
-    $('#autopulse_jealousy_delay_max_input').on('change', function () { onJealousyDelayMaxChange(this.value); });
+    $('#autopulse_jealousy_chance').on('input', function () { onJealousyChanceChange(this.value); });
+    $('#autopulse_jealousy_delay_min').on('input', function () { onJealousyDelayMinChange(this.value); });
+    $('#autopulse_jealousy_delay_max').on('input', function () { onJealousyDelayMaxChange(this.value); });
     $('#autopulse_jealousy_prompt').on('change', onJealousyPromptChange);
+
+    // Bind test buttons
+    $('#autopulse_test_pressure_up').on('click', () => {
+        const settings = getSettings();
+        if (!settings.pressureEnabled) {
+            toastr.warning('请先启用情绪压力系统', 'AutoPulse Lite');
+            return;
+        }
+        const maxLevel = settings.pressureMaxLevel || 4;
+        if (pressureLevel < maxLevel) {
+            pressureLevel++;
+            updatePressureDisplay();
+            toastr.success(`压力已提升到 ${pressureLevel}`, '测试工具');
+        } else {
+            toastr.info('已经是最高压力等级了', '测试工具');
+        }
+    });
+
+    $('#autopulse_test_pressure_trigger').on('click', () => {
+        const settings = getSettings();
+        handleTrigger(settings.prompt, `测试触发 (压力 ${pressureLevel})`);
+    });
+
+    $('#autopulse_test_return').on('click', () => {
+        const settings = getSettings();
+        if (!settings.pressureEnabled || !settings.pressureReturnEnabled) {
+            toastr.warning('请先启用情绪压力系统和回归反应', 'AutoPulse Lite');
+            return;
+        }
+        if (pressureLevel === 0) {
+            toastr.info('当前没有累计压力', '测试工具');
+            return;
+        }
+        returnReactionLevel = pressureLevel;
+        pendingReturnReaction = true;
+        pressureLevel = 0;
+        updatePressureDisplay();
+        toastr.success('已就绪，发送一条消息看看反应', '测试工具');
+    });
+
+    $('#autopulse_test_jealousy').on('click', () => {
+        const charId = ctx.characterId;
+        if (!charId) {
+            toastr.warning('请先打开一个角色的聊天', 'AutoPulse Lite');
+            return;
+        }
+        toastr.info('正在生成吃醋消息（无视概率和延时）...', '测试工具');
+        generateJealousyMessage(charId);
+    });
 
     // Refresh jealousy character picker when switching characters or updating chars
     ctx.eventSource.on(ctx.eventTypes.CHARACTER_EDITED, updateJealousyCharPicker);
