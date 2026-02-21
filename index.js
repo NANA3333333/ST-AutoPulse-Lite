@@ -405,6 +405,7 @@ async function generateJealousyMessage(characterId) {
 
         // Post-process string
         let cleaned = result
+            .replace(/<think>[\s\S]*?<\/think>/gi, '')
             .replace(/<thinking>[\s\S]*?<\/thinking>/gi, '')
             .replace(/<thought>[\s\S]*?<\/thought>/gi, '')
             .replace(/<reasoning>[\s\S]*?<\/reasoning>/gi, '')
@@ -520,11 +521,15 @@ function sendDesktopNotification(characterName, message) {
     if (!('Notification' in window)) return;
 
     if (Notification.permission === 'granted') {
-        new Notification(`${characterName} 发来了消息`, {
-            body: message.substring(0, 100) + (message.length > 100 ? '...' : ''),
-            icon: '/favicon.ico',
-            tag: 'autopulse-lite',
-        });
+        try {
+            new Notification(`${characterName} 发来了消息`, {
+                body: message.substring(0, 100) + (message.length > 100 ? '...' : ''),
+                icon: '/favicon.ico',
+                tag: 'autopulse-lite',
+            });
+        } catch (e) {
+            console.warn('[AutoPulse Lite] Failed to show desktop notification (mobile browser?):', e);
+        }
     } else if (Notification.permission !== 'denied') {
         Notification.requestPermission().then(perm => {
             if (perm === 'granted') {
