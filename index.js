@@ -244,7 +244,12 @@ async function handleTrigger(customPrompt, source = '自动消息') {
  * Triggered once after user sends a message while pressure > 0.
  */
 async function handleReturnReaction() {
-    if (!pendingReturnReaction || isGenerating) return;
+    if (!pendingReturnReaction) return;
+    if (isGenerating) {
+        // Wait and retry if already generating a message
+        setTimeout(handleReturnReaction, 1000);
+        return;
+    }
 
     const ctx = SillyTavern.getContext();
     const settings = getSettings();
@@ -1023,9 +1028,10 @@ async function initExtension() {
             tryTriggerJealousy(previousCharacterId);
         }
 
-        if (currentCharacterId) {
+        if (currentCharacterId !== undefined) {
             previousCharacterId = currentCharacterId;
-            updateJealousyCharPicker(); // Update highlighting
+        } else {
+            previousCharacterId = null; // Group chats or no chat selected
         }
     });
 
