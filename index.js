@@ -14,9 +14,42 @@ const DEFAULT_SETTINGS = Object.freeze({
     intervalMinutes: 30,
     prompt: '',
     notifyDesktop: true,
+    // Pressure system
+    pressureEnabled: false,
+    pressureMaxLevel: 4,
+    pressureReturnEnabled: true,
+    // Jealousy system
+    jealousyEnabled: false,
+    jealousyChance: 50,
+    jealousyDelayMin: 30,
+    jealousyDelayMax: 120,
+    jealousyCharacters: [],
+    jealousyPrompt: '',
 });
 
 const DEFAULT_PROMPT = '一段时间过去了。请根据当前的对话上下文、角色性格和背景设定，以角色的身份主动向用户发送一条自然的消息。这条消息应该像是角色在想到用户时自然地发出的，可以是问候、分享日常、表达关心、或延续之前的话题。请保持角色的语气和风格一致。';
+
+// ─── Pressure System Prompts ─────────────────────────────────────────
+
+const PRESSURE_MULTIPLIERS = [1.0, 0.7, 0.5, 0.3, 0.2];
+
+const PRESSURE_PROMPTS = [
+    '', // Level 0: normal
+    '（[情绪背景：你开始有些想念对方了，有一小段时间没有收到回复。]）\n',
+    '（[情绪背景：你已经有一段时间没收到对方回复了，心里开始担心，想知道对方是否还好。]）\n',
+    '（[情绪背景：你已经等了很久很久，焦虑不安，忍不住想要再次联系对方。]）\n',
+    '（[情绪背景：你几乎无法忍受这漫长的等待，情绪已经到达极限，急切地想得到回应。]）\n',
+];
+
+const RETURN_PROMPTS = [
+    '', // Level 0: no special reaction
+    '（[情绪背景：对方终于回复了！你感到开心和轻松，被安抚了。]）\n',
+    '（[情绪背景：对方终于回复了，你松了口气，但心里有些小小的抱怨，带着轻微的撒娇语气。]）\n',
+    '（[情绪背景：对方终于回复了！你又高兴又有些生气，觉得自己被冷落了，想要更多的关注和安慰。]）\n',
+    '（[情绪背景：对方终于回复了，但你很生气被冷落了这么久。你的情绪复杂——想要原谅但又忍不住表达不满。]）\n',
+];
+
+const JEALOUSY_PROMPT = '[OOC指令：暂时中断当前RP格式。你现在需要发送一条简短的即时消息（像微信/QQ/短信），不是写小说，不是RP。禁止使用动作描写、心理描写、环境描写、括号动作。只输出角色说的话，1-2句以内，口语化，像真人发消息一样。情境：你发现对方在和别人聊天，你感到嫉妒。]\n';
 
 // ─── State ───────────────────────────────────────────────────────────
 
@@ -24,6 +57,16 @@ let isGenerating = false;
 let nextTriggerTime = null;
 let countdownInterval = null;
 let autoTimerInterval = null;
+
+// Pressure system state
+let pressureLevel = 0;
+let lastUserMessageTime = Date.now();
+let pendingReturnReaction = false;
+let returnReactionLevel = 0;
+
+// Jealousy system state
+let previousCharacterId = null;
+let jealousyTimeout = null;
 
 // ─── Helpers ─────────────────────────────────────────────────────────
 
@@ -54,17 +97,23 @@ function startTimer() {
     const settings = getSettings();
     if (!settings.enabled) return;
 
-    const intervalMs = settings.intervalMinutes * 60 * 1000;
+    let intervalMs = settings.intervalMinutes * 60 * 1000;
+
+    // Apply pressure multiplier
+    if (settings.pressureEnabled) {
+        const multiplier = PRESSURE_MULTIPLIERS[Math.min(pressureLevel, PRESSURE_MULTIPLIERS.length - 1)] || 1.0;
+        intervalMs = Math.max(60000, Math.round(intervalMs * multiplier)); // Min 1 min
+    }
 
     autoTimerInterval = setInterval(() => {
-        console.log('[AutoPulse Lite] Timer fired!');
-        handleTrigger(settings.prompt, `定时消息 (每${settings.intervalMinutes}分钟)`);
+        console.log(`[AutoPulse Lite] Timer fired! (Pressure: ${pressureLevel})`);
+        handleTrigger(settings.prompt, `定时消息 (基础${settings.intervalMinutes}分, 压力${pressureLevel})`);
     }, intervalMs);
 
     nextTriggerTime = Date.now() + intervalMs;
     startCountdown();
 
-    console.log(`[AutoPulse Lite] Timer started, interval: ${settings.intervalMinutes} min`);
+    console.log(`[AutoPulse Lite] Timer started, base: ${settings.intervalMinutes}m, pressure: ${pressureLevel}, actual: ${Math.round(intervalMs / 60000)}m`);
 }
 
 function stopTimer() {
@@ -111,10 +160,17 @@ async function handleTrigger(customPrompt, source = '自动消息') {
     }
 
     const settings = getSettings();
-    const prompt = customPrompt || settings.prompt || DEFAULT_PROMPT;
+    let prompt = customPrompt || settings.prompt || DEFAULT_PROMPT;
+
+    // Inject pressure emotion into prompt if pressure system is enabled
+    if (settings.pressureEnabled && pressureLevel > 0) {
+        const pressurePrompt = PRESSURE_PROMPTS[Math.min(pressureLevel, PRESSURE_PROMPTS.length - 1)] || '';
+        prompt = pressurePrompt + prompt;
+        console.log(`[AutoPulse Lite] Pressure level ${pressureLevel}, injecting emotional context`);
+    }
 
     isGenerating = true;
-    console.log(`[AutoPulse Lite] Generating message (source: ${source})...`);
+    console.log(`[AutoPulse Lite] Generating message (source: ${source}, pressure: ${pressureLevel})...`);
 
     try {
         // Use generateQuietPrompt to generate text with chat context
@@ -140,6 +196,7 @@ async function handleTrigger(customPrompt, source = '自动消息') {
                 autopulse: true,
                 autopulse_source: source,
                 autopulse_timestamp: Date.now(),
+                autopulse_pressure: pressureLevel,
             },
         };
 
@@ -161,7 +218,17 @@ async function handleTrigger(customPrompt, source = '自动消息') {
             sendDesktopNotification(ctx.name2, messageText);
         }
 
-        // Reset the timer countdown
+        // Escalate pressure if enabled
+        if (settings.pressureEnabled) {
+            const maxLevel = settings.pressureMaxLevel || 4;
+            if (pressureLevel < maxLevel) {
+                pressureLevel++;
+                console.log(`[AutoPulse Lite] Pressure escalated to level ${pressureLevel}`);
+                updatePressureDisplay();
+            }
+        }
+
+        // Reset the timer countdown (which will now use the new shorter interval)
         resetTimer();
 
     } catch (e) {
@@ -170,6 +237,276 @@ async function handleTrigger(customPrompt, source = '自动消息') {
     } finally {
         isGenerating = false;
     }
+}
+
+/**
+ * Handle return reaction when user replies after being away.
+ * Triggered once after user sends a message while pressure > 0.
+ */
+async function handleReturnReaction() {
+    if (!pendingReturnReaction || isGenerating) return;
+
+    const ctx = SillyTavern.getContext();
+    const settings = getSettings();
+
+    if (!settings.pressureEnabled || !settings.pressureReturnEnabled) {
+        pendingReturnReaction = false;
+        return;
+    }
+
+    if (!ctx.characterId && !ctx.groupId) return;
+    if (!ctx.chat || ctx.chat.length === 0) return;
+
+    const returnPrompt = RETURN_PROMPTS[Math.min(returnReactionLevel, RETURN_PROMPTS.length - 1)] || '';
+    if (!returnPrompt) {
+        pendingReturnReaction = false;
+        return;
+    }
+
+    const basePrompt = settings.prompt || DEFAULT_PROMPT;
+    const prompt = returnPrompt + basePrompt;
+
+    pendingReturnReaction = false;
+    console.log(`[AutoPulse Lite] Generating return reaction (was pressure level ${returnReactionLevel})`);
+
+    isGenerating = true;
+    try {
+        const result = await ctx.generateQuietPrompt({
+            quietPrompt: prompt,
+            quietImage: null,
+            skipWIAN: false,
+        });
+
+        if (!result || result.trim().length === 0) return;
+
+        const messageText = result.trim();
+        const message = {
+            name: ctx.name2,
+            is_user: false,
+            mes: messageText,
+            force_avatar: ctx.getThumbnailUrl('avatar', ctx.characters[ctx.characterId]?.avatar),
+            extra: {
+                autopulse: true,
+                autopulse_source: `回归反应 (压力等级${returnReactionLevel})`,
+                autopulse_timestamp: Date.now(),
+            },
+        };
+
+        ctx.chat.push(message);
+        const messageId = ctx.chat.length - 1;
+        ctx.addOneMessage(message, { insertAfter: messageId - 1 });
+        await ctx.saveChat();
+
+        console.log(`[AutoPulse Lite] Return reaction sent: "${messageText.substring(0, 50)}..."`);
+        toastr.info(`${ctx.name2} 对你的回归做出了反应`, 'AutoPulse Lite', { timeOut: 3000 });
+
+    } catch (e) {
+        console.error('[AutoPulse Lite] Failed to generate return reaction:', e);
+    } finally {
+        isGenerating = false;
+    }
+}
+
+// ─── Jealousy Floating Window ────────────────────────────────────────
+
+/**
+ * Try to trigger a jealousy message from the previous character.
+ * Called when user switches to a different chat.
+ * @param {string} prevCharId The character ID that was left
+ */
+function tryTriggerJealousy(prevCharId) {
+    const settings = getSettings();
+    if (!settings.jealousyEnabled || !prevCharId) return;
+
+    // Check if this character is in the jealousy whitelist
+    const allowedChars = settings.jealousyCharacters || [];
+    if (allowedChars.length === 0) {
+        console.log('[AutoPulse Lite] Jealousy: no characters selected, skipping');
+        return;
+    }
+    if (!allowedChars.includes(String(prevCharId))) {
+        console.log(`[AutoPulse Lite] Jealousy: character ${prevCharId} not in whitelist, skipping`);
+        return;
+    }
+
+    // Cancel any existing jealousy timeout
+    if (jealousyTimeout) {
+        clearTimeout(jealousyTimeout);
+        jealousyTimeout = null;
+    }
+
+    // Roll the dice
+    const chance = (settings.jealousyChance || 50) / 100;
+    if (Math.random() > chance) {
+        console.log('[AutoPulse Lite] Jealousy roll failed, skipping');
+        return;
+    }
+
+    // Random delay
+    const minDelay = (settings.jealousyDelayMin || 30) * 1000;
+    const maxDelay = (settings.jealousyDelayMax || 120) * 1000;
+    const delay = minDelay + Math.random() * (maxDelay - minDelay);
+
+    console.log(`[AutoPulse Lite] Jealousy triggered for character ${prevCharId}, firing in ${Math.round(delay / 1000)}s`);
+
+    jealousyTimeout = setTimeout(async () => {
+        await generateJealousyMessage(prevCharId);
+    }, delay);
+}
+
+/**
+ * Generate and display a jealousy message from a specific character.
+ * @param {string} characterId The jealous character's ID
+ */
+async function generateJealousyMessage(characterId) {
+    if (isGenerating) {
+        console.log('[AutoPulse Lite] Already generating, skipping jealousy');
+        toastr.warning('正在生成中，请稍候再试', 'AutoPulse Lite');
+        return;
+    }
+
+    const ctx = SillyTavern.getContext();
+    const character = ctx.characters[characterId];
+    if (!character) {
+        console.warn('[AutoPulse Lite] Character not found for jealousy:', characterId);
+        return;
+    }
+
+    const settings = getSettings();
+    const prompt = settings.jealousyPrompt?.trim() || JEALOUSY_PROMPT;
+    console.log('[AutoPulse Lite] Using jealousy prompt:', prompt.substring(0, 60) + '...');
+
+    console.log(`[AutoPulse Lite] Generating jealousy message from ${character.name} (id: ${characterId})...`);
+
+    isGenerating = true;
+    try {
+        const result = await ctx.generateQuietPrompt({
+            quietPrompt: prompt,
+            quietImage: null,
+            skipWIAN: false,
+            responseLength: 150,
+            removeReasoning: true,
+            trimToSentence: true,
+            forceChId: characterId,
+        });
+
+        console.log('[AutoPulse Lite] Jealousy raw result:', result);
+
+        if (!result || result.trim().length === 0) {
+            console.warn('[AutoPulse Lite] Jealousy message empty, skipping');
+            toastr.warning('嫉妒消息生成为空', 'AutoPulse Lite');
+            return;
+        }
+
+        // Post-process string
+        let cleaned = result
+            .replace(/<thinking>[\s\S]*?<\/thinking>/gi, '')
+            .replace(/<thought>[\s\S]*?<\/thought>/gi, '')
+            .replace(/<reasoning>[\s\S]*?<\/reasoning>/gi, '')
+            .replace(/<chain_of_thought>[\s\S]*?<\/chain_of_thought>/gi, '')
+            .replace(/<内心[\s\S]*?>[\s\S]*?<\/内心[\s\S]*?>/gi, '')
+            .replace(/\[thinking\][\s\S]*?\[\/thinking\]/gi, '')
+            .trim();
+
+        cleaned = cleaned.replace(/\*[^*]+\*/g, '').trim();
+
+        const lines = cleaned.split('\n').map(l => l.trim()).filter(l => l.length > 0);
+        if (lines.length > 2) {
+            cleaned = lines.slice(-2).join('\n');
+        }
+
+        cleaned = cleaned.replace(/^["「『"]([\s\S]+)["」』"]$/, '$1').trim();
+
+        if (!cleaned) {
+            console.warn('[AutoPulse Lite] Jealousy message empty after cleanup');
+            toastr.warning('嫉妒消息清理后为空', 'AutoPulse Lite');
+            return;
+        }
+
+        const messageText = cleaned;
+
+        // Show floating notification
+        try {
+            const avatarUrl = ctx.getThumbnailUrl('avatar', character.avatar);
+            console.log('[AutoPulse Lite] Showing jealousy popup:', character.name, avatarUrl);
+            showJealousyPopup(character.name, avatarUrl, messageText);
+        } catch (popupErr) {
+            console.error('[AutoPulse Lite] Popup creation failed:', popupErr);
+        }
+
+        // Toast notification
+        toastr.info(`${character.name} 看起来有点嫉妒...`, 'AutoPulse Lite 💢', { timeOut: 5000 });
+
+        // Desktop notification
+        if (settings.notifyDesktop) {
+            sendDesktopNotification(character.name, messageText);
+        }
+
+        console.log(`[AutoPulse Lite] Jealousy message sent: "${messageText.substring(0, 80)}"`);
+
+    } catch (e) {
+        console.error('[AutoPulse Lite] Failed to generate jealousy message:', e);
+        toastr.error(`嫉妒消息生成失败: ${e.message}`, 'AutoPulse Lite');
+    } finally {
+        isGenerating = false;
+    }
+}
+
+function escapeHtml(unsafe) {
+    return (unsafe || '').toString()
+        .replace(/&/g, "&amp;")
+        .replace(/</g, "&lt;")
+        .replace(/>/g, "&gt;")
+        .replace(/"/g, "&quot;")
+        .replace(/'/g, "&#039;");
+}
+
+/**
+ * Show a floating notification popup for jealousy messages.
+ * @param {string} name Character name
+ * @param {string} avatarUrl Character avatar URL
+ * @param {string} message The jealousy message text
+ */
+function showJealousyPopup(name, avatarUrl, message) {
+    // Create container if not exists
+    let container = document.getElementById('autopulse_jealousy_container');
+    if (!container) {
+        container = document.createElement('div');
+        container.id = 'autopulse_jealousy_container';
+        document.body.appendChild(container);
+    }
+
+    // Limit to 3 popups max
+    while (container.children.length >= 3) {
+        container.removeChild(container.firstChild);
+    }
+
+    const popup = document.createElement('div');
+    popup.className = 'autopulse-jealousy-popup';
+    popup.innerHTML = `
+        <div class="autopulse-jealousy-header">
+            <img class="autopulse-jealousy-avatar" src="${avatarUrl || '/favicon.ico'}" alt="${escapeHtml(name)}" />
+            <span class="autopulse-jealousy-name">${escapeHtml(name)} 💢</span>
+            <span class="autopulse-jealousy-close fa-solid fa-xmark"></span>
+        </div>
+        <div class="autopulse-jealousy-body">${escapeHtml(message).substring(0, 200)}${message.length > 200 ? '...' : ''}</div>
+    `;
+
+    // Close button
+    popup.querySelector('.autopulse-jealousy-close').addEventListener('click', () => {
+        popup.classList.add('autopulse-jealousy-exit');
+        setTimeout(() => popup.remove(), 300);
+    });
+
+    // Auto-dismiss after 15 seconds
+    setTimeout(() => {
+        if (popup.parentNode) {
+            popup.classList.add('autopulse-jealousy-exit');
+            setTimeout(() => popup.remove(), 300);
+        }
+    }, 15000);
+
+    container.appendChild(popup);
 }
 
 // ─── Desktop Notifications ───────────────────────────────────────────
@@ -294,6 +631,142 @@ function onTriggerNow() {
     handleTrigger(settings.prompt, '手动触发');
 }
 
+// ─── Pressure System UI Handlers ─────────────────────────────────────
+
+function onPressureEnabledChange() {
+    const settings = getSettings();
+    settings.pressureEnabled = $('#autopulse_pressure_enabled').prop('checked');
+    saveSettings();
+    if (!settings.pressureEnabled) {
+        pressureLevel = 0;
+        updatePressureDisplay();
+        if (settings.enabled) resetTimer(); // Reset back to normal interval
+    }
+}
+
+function onPressureMaxLevelChange(value) {
+    const settings = getSettings();
+    const v = Math.max(1, Math.min(4, Number(value) || 4));
+    settings.pressureMaxLevel = v;
+    $('#autopulse_pressure_max_range').val(v);
+    $('#autopulse_pressure_max_input').val(v);
+    saveSettings();
+    if (pressureLevel > v) {
+        pressureLevel = v;
+        updatePressureDisplay();
+    }
+}
+
+function onPressureReturnChange() {
+    const settings = getSettings();
+    settings.pressureReturnEnabled = $('#autopulse_pressure_return').prop('checked');
+    saveSettings();
+}
+
+function updatePressureDisplay() {
+    const display = $('#autopulse_pressure_display');
+    display.text(pressureLevel);
+
+    // Color logic
+    if (pressureLevel === 0) display.css('color', '');
+    else if (pressureLevel === 1) display.css('color', '#ffb74d'); // Orange
+    else if (pressureLevel === 2) display.css('color', '#ff9800'); // Dark orange
+    else if (pressureLevel === 3) display.css('color', '#f44336'); // Red
+    else display.css('color', '#d32f2f'); // Dark red
+}
+
+// ─── Jealousy System UI Handlers ─────────────────────────────────────
+
+function onJealousyEnabledChange() {
+    const settings = getSettings();
+    settings.jealousyEnabled = $('#autopulse_jealousy_enabled').prop('checked');
+    saveSettings();
+}
+
+function onJealousyChanceChange(value) {
+    const settings = getSettings();
+    const v = Math.max(0, Math.min(100, Number(value) || 50));
+    settings.jealousyChance = v;
+    $('#autopulse_jealousy_chance_range').val(v);
+    $('#autopulse_jealousy_chance_input').val(v);
+    saveSettings();
+}
+
+function onJealousyDelayMinChange(value) {
+    const settings = getSettings();
+    const v = Math.max(1, Math.min(300, Number(value) || 30));
+    settings.jealousyDelayMin = v;
+    $('#autopulse_jealousy_delay_min_input').val(v);
+    if (settings.jealousyDelayMin > settings.jealousyDelayMax) {
+        settings.jealousyDelayMax = settings.jealousyDelayMin;
+        $('#autopulse_jealousy_delay_max_input').val(v);
+    }
+    saveSettings();
+}
+
+function onJealousyDelayMaxChange(value) {
+    const settings = getSettings();
+    let v = Math.max(1, Math.min(600, Number(value) || 120));
+    if (v < settings.jealousyDelayMin) {
+        v = settings.jealousyDelayMin;
+    }
+    settings.jealousyDelayMax = v;
+    $('#autopulse_jealousy_delay_max_input').val(v);
+    saveSettings();
+}
+
+function onJealousyPromptChange() {
+    const settings = getSettings();
+    settings.jealousyPrompt = $('#autopulse_jealousy_prompt').val().trim();
+    saveSettings();
+}
+
+function updateJealousyCharPicker() {
+    const settings = getSettings();
+    const container = $('#autopulse_jealousy_chars');
+    container.empty();
+
+    const ctx = SillyTavern.getContext();
+    const chars = ctx.characters || [];
+
+    if (chars.length === 0) {
+        container.html('<span class="autopulse-hint">没有找到角色。请先添加一些角色。</span>');
+        return;
+    }
+
+    const selectedChars = settings.jealousyCharacters || [];
+
+    chars.forEach((char, index) => {
+        const isSelected = selectedChars.includes(String(index));
+        const avatarUrl = ctx.getThumbnailUrl('avatar', char.avatar) || '/favicon.ico';
+
+        const chip = $(`
+            <div class="autopulse-char-chip ${isSelected ? 'selected' : ''}" data-id="${index}" title="${escapeHtml(char.name)}">
+                <img class="autopulse-char-chip-avatar" src="${avatarUrl}" />
+                <span class="autopulse-char-chip-name">${escapeHtml(char.name)}</span>
+            </div>
+        `);
+
+        chip.on('click', function () {
+            const id = $(this).data('id').toString();
+            const currSettings = getSettings();
+            currSettings.jealousyCharacters = currSettings.jealousyCharacters || [];
+
+            const idx = currSettings.jealousyCharacters.indexOf(id);
+            if (idx > -1) {
+                currSettings.jealousyCharacters.splice(idx, 1);
+                $(this).removeClass('selected');
+            } else {
+                currSettings.jealousyCharacters.push(id);
+                $(this).addClass('selected');
+            }
+            saveSettings();
+        });
+
+        container.append(chip);
+    });
+}
+
 // ─── Slash Commands ──────────────────────────────────────────────────
 
 function registerSlashCommands() {
@@ -383,6 +856,22 @@ function loadSettingsUI() {
     $('#autopulse_interval_input').val(settings.intervalMinutes);
     $('#autopulse_prompt').val(settings.prompt);
     $('#autopulse_notify').prop('checked', settings.notifyDesktop);
+
+    // Pressure settings
+    $('#autopulse_pressure_enabled').prop('checked', settings.pressureEnabled);
+    $('#autopulse_pressure_max_range').val(settings.pressureMaxLevel || 4);
+    $('#autopulse_pressure_max_input').val(settings.pressureMaxLevel || 4);
+    $('#autopulse_pressure_return').prop('checked', settings.pressureReturnEnabled !== false);
+    updatePressureDisplay();
+
+    // Jealousy settings
+    $('#autopulse_jealousy_enabled').prop('checked', settings.jealousyEnabled);
+    $('#autopulse_jealousy_chance_range').val(settings.jealousyChance || 50);
+    $('#autopulse_jealousy_chance_input').val(settings.jealousyChance || 50);
+    $('#autopulse_jealousy_delay_min_input').val(settings.jealousyDelayMin || 30);
+    $('#autopulse_jealousy_delay_max_input').val(settings.jealousyDelayMax || 120);
+    $('#autopulse_jealousy_prompt').val(settings.jealousyPrompt || JEALOUSY_PROMPT);
+    updateJealousyCharPicker();
 }
 
 async function initExtension() {
@@ -392,13 +881,31 @@ async function initExtension() {
     const settingsHtml = await $.get(`scripts/extensions/third-party/${MODULE_NAME}/settings.html`);
     $('#extensions_settings').append(settingsHtml);
 
-    // Bind UI events
+    // Bind UI events - Basic
     $('#autopulse_enabled').on('change', onEnabledChange);
     $('#autopulse_interval_range').on('input', function () { onIntervalChange(this.value); });
     $('#autopulse_interval_input').on('change', function () { onIntervalChange(this.value); });
     $('#autopulse_prompt').on('change', onPromptChange);
     $('#autopulse_notify').on('change', onNotifyChange);
     $('#autopulse_trigger_now').on('click', onTriggerNow);
+
+    // Bind UI events - Pressure
+    $('#autopulse_pressure_enabled').on('change', onPressureEnabledChange);
+    $('#autopulse_pressure_max_range').on('input', function () { onPressureMaxLevelChange(this.value); });
+    $('#autopulse_pressure_max_input').on('change', function () { onPressureMaxLevelChange(this.value); });
+    $('#autopulse_pressure_return').on('change', onPressureReturnChange);
+
+    // Bind UI events - Jealousy
+    $('#autopulse_jealousy_enabled').on('change', onJealousyEnabledChange);
+    $('#autopulse_jealousy_chance_range').on('input', function () { onJealousyChanceChange(this.value); });
+    $('#autopulse_jealousy_chance_input').on('change', function () { onJealousyChanceChange(this.value); });
+    $('#autopulse_jealousy_delay_min_input').on('change', function () { onJealousyDelayMinChange(this.value); });
+    $('#autopulse_jealousy_delay_max_input').on('change', function () { onJealousyDelayMaxChange(this.value); });
+    $('#autopulse_jealousy_prompt').on('change', onJealousyPromptChange);
+
+    // Refresh jealousy character picker when switching characters or updating chars
+    ctx.eventSource.on(ctx.eventTypes.CHARACTER_EDITED, updateJealousyCharPicker);
+    ctx.eventSource.on(ctx.eventTypes.CHARACTERS_LOADED, updateJealousyCharPicker);
 
     // Load settings into UI
     loadSettingsUI();
@@ -413,20 +920,58 @@ async function initExtension() {
         startTimer();
     }
 
-    // Listen for user messages to reset the idle timer
+    // Listen for user messages to reset the idle timer and handle pressure
     ctx.eventSource.on(ctx.eventTypes.MESSAGE_SENT, () => {
         const settings = getSettings();
+
+        // Handle Return Reaction if pressure is high
+        if (settings.pressureEnabled && pressureLevel > 0) {
+            console.log(`[AutoPulse Lite] User replied at pressure level ${pressureLevel}, scheduling return reaction`);
+            returnReactionLevel = pressureLevel;
+            pendingReturnReaction = true;
+            pressureLevel = 0;
+            updatePressureDisplay();
+
+            // Allow SillyTavern to process the current message before generating reaction
+            setTimeout(() => {
+                handleReturnReaction();
+            }, 3000); // 3 second delay for dramatic pacing
+        } else if (settings.pressureEnabled) {
+            pressureLevel = 0;
+            updatePressureDisplay();
+        }
+
+        lastUserMessageTime = Date.now();
+
         if (settings.enabled) {
-            resetTimer();
+            resetTimer(); // Timer resets with normal interval (since pressure is 0)
         }
     });
 
-    // Listen for chat changes
+    // Listen for chat changes for jealousy system
     ctx.eventSource.on(ctx.eventTypes.CHAT_CHANGED, () => {
+        const currentCharacterId = ctx.characterId;
+
+        // Timer resets on chat switch
         if (getSettings().enabled) {
             resetTimer();
         }
+
+        // Jealousy Logic
+        if (previousCharacterId !== null && previousCharacterId !== currentCharacterId) {
+            tryTriggerJealousy(previousCharacterId);
+        }
+
+        if (currentCharacterId) {
+            previousCharacterId = currentCharacterId;
+            updateJealousyCharPicker(); // Update highlighting
+        }
     });
+
+    // Handle initial chat selection
+    if (ctx.characterId) {
+        previousCharacterId = ctx.characterId;
+    }
 
     console.log('[AutoPulse Lite] UI Extension initialized! (frontend-only mode)');
 }
