@@ -65,6 +65,3 @@ https://github.com/NANA3333333/ST-AutoPulse-Lite
 | `/autopulse status` | Check the current status |
 | `/autopulse 30` | Set interval to 30 minutes |
 
-## 📄 License
-
-MIT
