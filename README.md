@@ -94,3 +94,4 @@ A: 不建议，因为两者 Slash 命令名相同（`/autopulse`）会冲突。�
 
 ## 📄 License
 
+MIT
