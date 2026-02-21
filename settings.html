@@ -15,12 +15,12 @@
             <!-- Enable Toggle -->
             <label class="checkbox_label" for="autopulse_enabled">
                 <input type="checkbox" id="autopulse_enabled" />
-                <span>启用自动消息</span>
+                <span>启用自动消息 / Enable Auto Messages</span>
             </label>
 
             <!-- Interval -->
             <div class="autopulse-setting-group">
-                <label>消息间隔（分钟）</label>
+                <label>消息间隔 / Interval (min)</label>
                 <div class="autopulse-interval-row">
                     <input type="range" id="autopulse_interval_range" min="1" max="180" value="30" />
                     <input type="number" id="autopulse_interval_input" min="1" max="180" value="30"
@@ -37,8 +37,8 @@
             <!-- Prompt -->
             <div class="autopulse-setting-group">
                 <label>
-                    自定义触发提示词
-                    <small>（留空使用默认提示词）</small>
+                    自定义触发提示词 / Custom Prompt
+                    <small>（留空使用默认 / Leave empty for default）</small>
                 </label>
                 <textarea id="autopulse_prompt" class="text_pole autopulse-prompt-input" rows="4"
                     placeholder="例如：一段时间过去了，角色想要主动联系用户。根据当前对话上下文和角色性格，生成一条自然的主动消息。"></textarea>
@@ -47,14 +47,14 @@
             <!-- Desktop Notification -->
             <label class="checkbox_label" for="autopulse_notify">
                 <input type="checkbox" id="autopulse_notify" checked />
-                <span>桌面通知</span>
+                <span>桌面通知 / Desktop Notifications</span>
             </label>
 
             <!-- Manual Trigger -->
             <div class="autopulse-actions">
                 <div class="menu_button" id="autopulse_trigger_now">
                     <span class="fa-solid fa-bolt"></span>
-                    <span>立即触发一次</span>
+                    <span>立即触发一次 / Trigger Now</span>
                 </div>
             </div>
 
@@ -62,28 +62,29 @@
 
             <!-- Pressure / Anxiety System -->
             <div class="autopulse-section-header">
-                <b>情绪压力系统</b>
+                <b>情绪压力系统 / Emotional Pressure</b>
             </div>
 
             <div class="autopulse-setting-group">
                 <label class="checkbox_label" for="autopulse_pressure_enabled">
                     <input type="checkbox" id="autopulse_pressure_enabled" />
-                    <span>启用压力系统</span>
+                    <span>启用压力系统 / Enable Pressure</span>
                 </label>
                 <small class="autopulse-hint"
-                    style="display:block; margin-left:24px; color:var(--SmartThemeQuoteColor);">（角色等待越久越焦虑，你回复后会有情绪反应）</small>
+                    style="display:block; margin-left:24px; color:var(--SmartThemeQuoteColor);">（角色等待越久越焦虑 / Character
+                    gets anxious the longer you're away）</small>
             </div>
 
             <div class="autopulse-setting-group">
                 <label>
-                    <span>当前压力等级：</span>
+                    <span>当前压力等级 / Current Level：</span>
                     <span id="autopulse_pressure_display" style="font-weight:bold; color:#4caf50;">😊 等级 0</span>
                 </label>
             </div>
 
             <div class="autopulse-setting-group">
                 <label style="display:flex; justify-content:space-between;">
-                    <span>最大压力等级</span>
+                    <span>最大压力等级 / Max Level</span>
                     <span id="autopulse_pressure_max_display" style="font-weight:bold;">4</span>
                 </label>
                 <input type="range" id="autopulse_pressure_max" min="1" max="5" value="4" style="width:100%;" />
@@ -92,24 +93,25 @@
             <div class="autopulse-setting-group">
                 <label class="checkbox_label" for="autopulse_pressure_return">
                     <input type="checkbox" id="autopulse_pressure_return" checked />
-                    <span>启用回归反应</span>
+                    <span>启用回归反应 / Return Reaction</span>
                 </label>
                 <small class="autopulse-hint"
-                    style="display:block; margin-left:24px; color:var(--SmartThemeQuoteColor);">（你回复后角色根据冷落时长表现被安抚/不满/生气）</small>
+                    style="display:block; margin-left:24px; color:var(--SmartThemeQuoteColor);">（回复后角色会做出反应 / Character
+                    reacts when you return）</small>
             </div>
 
             <div class="autopulse-actions" style="display:flex; gap:10px; flex-wrap:wrap; margin-top:10px;">
                 <div id="autopulse_test_pressure_up" class="menu_button" title="模拟压力升级">
                     <span class="fa-solid fa-arrow-up"></span>
-                    <span>压力+1</span>
+                    <span>压力+1 / Pressure+1</span>
                 </div>
                 <div id="autopulse_test_pressure_trigger" class="menu_button" title="以当前压力等级触发一次消息">
                     <span class="fa-solid fa-bolt"></span>
-                    <span>测试触发</span>
+                    <span>测试触发 / Test Fire</span>
                 </div>
                 <div id="autopulse_test_return" class="menu_button" title="模拟回归反应">
                     <span class="fa-solid fa-heart"></span>
-                    <span>测试回归</span>
+                    <span>测试回归 / Test Return</span>
                 </div>
             </div>
 
@@ -117,23 +119,25 @@
 
             <!-- Jealousy System -->
             <div class="autopulse-section-header">
-                <b>嫉妒系统 💢</b>
+                <b>嫉妒系统 / Jealousy System 💢</b>
             </div>
 
             <div class="autopulse-setting-group">
                 <label class="checkbox_label" for="autopulse_jealousy_enabled">
                     <input type="checkbox" id="autopulse_jealousy_enabled" />
-                    <span>启用嫉妒系统</span>
+                    <span>启用嫉妒系统 / Enable Jealousy</span>
                 </label>
                 <small class="autopulse-hint"
-                    style="display:block; margin-left:24px; color:var(--SmartThemeQuoteColor);">（切换角色时，被离开的角色可能嫉妒弹窗）</small>
+                    style="display:block; margin-left:24px; color:var(--SmartThemeQuoteColor);">（切换角色时触发 / Triggers when
+                    switching characters）</small>
             </div>
 
             <div class="autopulse-setting-group">
                 <label>
-                    <span>选择会嫉妒的角色：</span>
+                    <span>选择会嫉妒的角色 / Jealous Characters：</span>
                     <small class="autopulse-hint"
-                        style="display:block; margin-bottom:5px; color:var(--SmartThemeQuoteColor);">（不选=不会触发嫉妒）</small>
+                        style="display:block; margin-bottom:5px; color:var(--SmartThemeQuoteColor);">（不选=不触发 / None
+                        selected = disabled）</small>
                 </label>
                 <div id="autopulse_jealousy_chars"
                     style="max-height:150px; overflow-y:auto; border:1px solid var(--SmartThemeBorderColor); padding:5px; border-radius:5px;">
@@ -143,8 +147,8 @@
 
             <div class="autopulse-setting-group">
                 <label>
-                    <span>自定义嫉妒提示词</span>
-                    <small class="autopulse-hint">（留空使用默认）</small>
+                    <span>自定义嫉妒提示词 / Jealousy Prompt</span>
+                    <small class="autopulse-hint">（留空使用默认 / Leave empty for default）</small>
                 </label>
                 <textarea id="autopulse_jealousy_prompt" class="text_pole autopulse-prompt-input" rows="3"
                     placeholder="留空=默认。示例：你发现对方在和别人聊天了，用1句话表达嫉妒，像发微信一样简短。"></textarea>
@@ -152,7 +156,7 @@
 
             <div class="autopulse-setting-group">
                 <label style="display:flex; justify-content:space-between;">
-                    <span>嫉妒触发概率</span>
+                    <span>嫉妒触发概率 / Trigger Chance</span>
                     <span id="autopulse_jealousy_chance_display" style="font-weight:bold;">50%</span>
                 </label>
                 <input type="range" id="autopulse_jealousy_chance" min="0" max="100" value="50" style="width:100%;" />
@@ -160,7 +164,7 @@
 
             <div class="autopulse-setting-group">
                 <label style="display:flex; justify-content:space-between;">
-                    <span>最短延迟（秒）</span>
+                    <span>最短延迟 / Min Delay (s)</span>
                     <span id="autopulse_jealousy_delay_min_display" style="font-weight:bold;">30s</span>
                 </label>
                 <input type="range" id="autopulse_jealousy_delay_min" min="5" max="300" value="30"
@@ -169,7 +173,7 @@
 
             <div class="autopulse-setting-group">
                 <label style="display:flex; justify-content:space-between;">
-                    <span>最长延迟（秒）</span>
+                    <span>最长延迟 / Max Delay (s)</span>
                     <span id="autopulse_jealousy_delay_max_display" style="font-weight:bold;">120s</span>
                 </label>
                 <input type="range" id="autopulse_jealousy_delay_max" min="10" max="600" value="120"
@@ -179,7 +183,7 @@
             <div class="autopulse-actions" style="margin-top:10px;">
                 <div id="autopulse_test_jealousy" class="menu_button" title="立即触发当前角色的嫉妒消息">
                     <span class="fa-solid fa-fire"></span>
-                    <span>测试嫉妒弹窗</span>
+                    <span>测试嫉妒弹窗 / Test Jealousy</span>
                 </div>
             </div>
 
@@ -188,8 +192,8 @@
             <!-- Info Notice -->
             <div class="autopulse-notice">
                 <span class="fa-solid fa-circle-info"></span>
-                <span>Lite 版本：定时器在浏览器中运行，关闭页面后会停止。如需后台持续运行，请使用 <a href="https://github.com/NANA3333333/ST-AutoPulse"
-                        target="_blank">完整版 ST-AutoPulse</a>。</span>
+                <span>Lite 版：关闭页面后停止 / Lite: Stops when tab is closed. <a
+                        href="https://github.com/NANA3333333/ST-AutoPulse" target="_blank">Full Version / 完整版</a></span>
             </div>
 
         </div>

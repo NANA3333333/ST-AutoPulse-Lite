@@ -1,5 +1,6 @@
 # ST-AutoPulse Lite
 
+中文说明 | [English Documentation](README_EN.md)
 让 SillyTavern 中的角色能够**主动**向你发送消息的扩展。
 
 **纯前端版本** — 无需安装 Server Plugin，开箱即用，适合云酒馆和无法安装插件的环境。
